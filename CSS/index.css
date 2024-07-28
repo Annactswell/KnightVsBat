@@ -1,0 +1,37 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #333;
+}
+
+#canvas {
+  margin: 0.2rem 0.2rem;
+  width: 9.6rem;
+  background-color: #333;
+  border: 0.03rem solid black;
+}
+
+
+.keyboard {
+  background-color: #aaa;
+  margin: 0 0.2rem;
+  width: 9.6rem;
+  text-align: center;
+  padding-bottom: 0.2rem;
+}
+
+.keyboard .key {
+  margin: 0 0.03rem;
+  width: 0.65rem;
+  height: 0.5rem;
+  border: none;
+  background-color: #666;
+  color: white;
+  font-size: 0.4rem;
+}
+
+
