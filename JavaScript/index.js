@@ -3,6 +3,7 @@
 import { Sprite } from './Sprite.js';
 import { Canvas2D } from './Canvas2D.js';
 import { Item } from './Item.js';
+import { HitBox } from './HitBox.js';
 
 let curKey = 0;
 document.addEventListener('keydown', event => curKey = event.key);
@@ -18,7 +19,6 @@ const screen = new Canvas2D({
 });
 
 
-
 const sprites = {
   knight: {
     idle: new Sprite({ src: './Images/knight/knight.png', width: 86, height: 49, startX: 0, endX: 5, startY: 0, endY: 0, rate: 15 }),
@@ -28,7 +28,7 @@ const sprites = {
     jump: new Sprite({ src: './Images/knight/knight.png', width: 86, height: 49, startX: 0, endX: 5, startY: 0, endY: 0, rate: 15 })
   },
   bat: {
-    fly: new Sprite({ src: './Images/bat/bat.png', width: 64, height: 64, startX: 0, endX: 3, startY: 0, endY: 0, rate: 15 })
+    fly: new Sprite({ src: './Images/bat/bat.png', width: 64, height: 64, startX: 0, endX: 3, startY: 0, endY: 0, rate: 20 })
   },
   fire: {
     iceBall: new Sprite({ src: './Images/fire/iceBall.png', width: 84, height: 9, startX: 0, endX: 9, startY: 0, endY: 5, rate: 50 })
@@ -44,85 +44,89 @@ const sprites = {
   } 
 }
 
+
 const logics = {
-  knightFight: function(knight) {
+  knight: {
+    fight: function(knight) {
 
-    // 结束攻击动作
-    if ((knight.state === 'slashX' || knight.state === 'slashY' || knight.state === 'jump') && knight.sprite.isFinished) {
-      knight.state = 'idle';
-      knight.sprite = sprites.knight.idle;
-      knight.sprite.isFinished = false;
-    }
-
-    switch (curKey) {
-      case 'ArrowRight':
-        knight.x += knight.speed;
-        break;
-      case 'ArrowLeft':
-        knight.x -= knight.speed;
-        break;
-
-      case 'x': case 'X':
-        if (knight.state !== 'idle') break;
-        knight.state = 'slashX';
-        knight.sprite = sprites.knight.slashX;
+      // 结束攻击动作
+      if ((knight.state === 'slashX' || knight.state === 'slashY' || knight.state === 'jump') && knight.sprite.isFinished) {
+        knight.state = 'idle';
+        knight.sprite = sprites.knight.idle;
         knight.sprite.isFinished = false;
+      }
 
-        items.fires.push(new Item({
-          sprite: sprites.fire.iceBall.clone(),
-          state: 'fly',
-          logic: logics.fireFly,
-          x: knight.x + 0.2 * knight.width,
-          y: knight.y + 0.7 * knight.height,
-          size: 6,
-          speed: 30,
-          angle: Math.PI
-        }));
+      let iceBall = null;
+      
+  
+      switch (curKey) {
+        case 'ArrowRight':
+          knight.move({x: 1});
+          break;
+        case 'ArrowLeft':
+          knight.move({x: -1});
+          break;
+        case 'ArrowUp':
+          knight.move({y: -1});
+          break;
+        case 'ArrowDown':
+          knight.move({y: 1});
+          break;
+  
+        case 'x': case 'X':
+          if (knight.state !== 'idle') break;
+          knight.state = 'slashX';
+          knight.sprite = sprites.knight.slashX;
+          knight.sprite.isFinished = false;
 
-        break;
-
-      case 'z': case 'Z':
-        if (knight.state !== 'idle') break;
-        knight.state = 'slashY';
-        knight.sprite = sprites.knight.slashY;
-        knight.sprite.isFinished = false;
-
-        for (let i = 0; i < 6; i++) {
-          items.fires.push(new Item({
-            sprite: sprites.fire.iceBall.clone(),
-            state: 'fly',
-            logic: logics.fireFly,
-            x: knight.x + 0.2 * knight.width,
-            y: knight.y + 0.7 * knight.height,
-            size: 6,
-            speed: 30,
-            angle: Math.PI - Math.PI * i / 12
-          }));
-        }
+          iceBall = staticItems.fire.iceBall.clone();
+          iceBall.moveTo({ x: knight.x + knight.width * -0.75, y: knight.y + knight.height * 0.5 });
+          dynamicItems.fires.push(iceBall);
+  
+          break;
+  
+        case 'z': case 'Z':
+          if (knight.state !== 'idle') break;
+          knight.state = 'slashY';
+          knight.sprite = sprites.knight.slashY;
+          knight.sprite.isFinished = false;
+  
+          for (let i = 0; i < 6; i++) {
+            iceBall = staticItems.fire.iceBall.clone();
+            iceBall.moveTo({ x: knight.x + knight.width * -0.75, y: knight.y + knight.height * 0.5 });
+            iceBall.rotate({ angle: i * Math.PI / 12 });
+            dynamicItems.fires.push(iceBall);
+          }
+            
+            
+          break;
+  
+        case 's': case 'S':
+          knight.state = 'death';
+          knight.sprite = sprites.knight.death;
+          knight.sprite.isFinished = false;
           
-        break;
-
-      // case 'c': case 'C':
-      //   if (knight.state !== 'idle') break;
-      //   knight.state = 'jump';
-      //   knight.sprite = sprites.knight.idle;
-        
-      //   // 在这里写跳跃的逻辑
-
-      //   knight.sprite.isFinished = false;
-      //   break;
-
-      default:
-        break;
-    }
-
-    // 边界处理
-    if (knight.x + 0.5 * knight.width > screen.width) knight.x = screen.width - 0.5 * knight.width;
-    if (knight.x + 0.3 * knight.width < 0) knight.x = -0.3 * knight.width;
+        default:
+          break;
+      }          
+  
+      // 边界处理，重构
+      // if (knight.hitBox.centerX + knight.hitBox.width / 2 > screen.width) knight.move({ x: (screen.width - knight.hitBox.centerX + knight.hitBox.width / 2) / knight.speed });
+      if (knight.hitBox.centerX + knight.hitBox.width / 2 > screen.width) knight.move({ x: -1 });
+      if (knight.hitBox.centerX - knight.hitBox.width / 2 < 0) knight.move({ x: 1 });
+      if (knight.hitBox.centerY + knight.hitBox.height / 2 > screen.height) knight.move({ y: -1 });
+      if (knight.hitBox.centerY - knight.hitBox.height / 2 < 0) knight.move({ y: 1 });
+    },
   },
-  fireFly: function(fire) {
-    fire.x += fire.speed * Math.cos(Math.PI - fire.angle);
-    fire.y += fire.speed * Math.sin(-fire.angle);
+  fire: {
+    fly: function(fire) {
+      // return;
+      fire.move({ x: 1 });
+
+      // 之后重构
+      dynamicItems.bats = dynamicItems.bats.filter(bat => !fire.hitBox.isCollision(bat.hitBox));
+        
+    }
   },
   background: {
     move: function(background) {
@@ -133,80 +137,167 @@ const logics = {
   },
   bat: {
     fly: function(bat) {
-      bat.x -= bat.speed;
-      if (bat.x + bat.width < 0) bat.x = screen.width;
-      if (bat.x > screen.width) bat.x = -bat.width;
+      bat.move({ x: -1 });
+    
     },
   }
 }
 
 
-
-
-const items = {
-  knight: new Item({
-    sprite: sprites.knight.idle.clone(),
-    state: 'idle',
-    logic: logics.knightFight,
-    x: 0,
-    y: screen.height * 0.7,
-    size: 4,
-    speed: 10
-  }),
-  bats: ((num) => {
-    const bats = [];
-    for (let i = 0; i < num; i++) {
-      bats.push(new Item({
-        sprite: sprites.bat.fly.clone(),
-        state: 'fly',
-        logic: logics.bat.fly,
-        x: Math.random() * screen.width,
-        y: Math.random() * screen.height * 0.6,
-        size: 3,
-        speed: 10
-      }));
-    }
-    return bats;
-  })(10),
-  fires: [],
-  backgrounds: (() => {
-    let backgrounds = [];
-    backgrounds.push(new Item({ sprite: sprites.background.sky.clone(), state: 'move', logic: logics.background.move, x: 0, y: 0, size: screen.height / sprites.background.sky.height, speed: 1}));
-    backgrounds.push(new Item({ sprite: sprites.background.sky.clone(), state: 'move', logic: logics.background.move, x: screen.height / sprites.background.sky.height * sprites.background.sky.width, y: 0, size: screen.height / sprites.background.sky.height, speed: 1}));
-
-    backgrounds.push(new Item({ sprite: sprites.background.tree1.clone(), state: 'move', logic: logics.background.move, x: 0, y: 0, size: screen.height / sprites.background.tree1.height, speed: 2}));
-    backgrounds.push(new Item({ sprite: sprites.background.tree1.clone(), state: 'move', logic: logics.background.move, x: screen.height / sprites.background.tree1.height * sprites.background.tree1.width, y: 0, size: screen.height / sprites.background.tree1.height, speed: 2}));
-
-    backgrounds.push(new Item({ sprite: sprites.background.tree2.clone(), state: 'move', logic: logics.background.move, x: 0, y: 0, size: screen.height / sprites.background.tree2.height, speed: 3}));
-    backgrounds.push(new Item({ sprite: sprites.background.tree2.clone(), state: 'move', logic: logics.background.move, x: screen.height / sprites.background.tree2.height * sprites.background.tree2.width, y: 0, size: screen.height / sprites.background.tree2.height, speed: 3}));
-
-    backgrounds.push(new Item({ sprite: sprites.background.tree3.clone(), state: 'move', logic: logics.background.move, x: 0, y: 0, size: screen.height / sprites.background.tree3.height, speed: 4}));
-    backgrounds.push(new Item({ sprite: sprites.background.tree3.clone(), state: 'move', logic: logics.background.move, x: screen.height / sprites.background.tree3.height * sprites.background.tree3.width, y: 0, size: screen.height / sprites.background.tree3.height, speed: 4}));
-
-    backgrounds.push(new Item({ sprite: sprites.background.tree4.clone(), state: 'move', logic: logics.background.move, x: 0, y: 0, size: screen.height / sprites.background.tree4.height, speed: 5}));
-    backgrounds.push(new Item({ sprite: sprites.background.tree4.clone(), state: 'move', logic: logics.background.move, x: screen.height / sprites.background.tree4.height * sprites.background.tree4.width, y: 0, size: screen.height / sprites.background.tree4.height, speed: 5}));
-
-    backgrounds.push(new Item({ sprite: sprites.background.ground.clone(), state: 'move', logic: logics.background.move, x: 0, y: screen.height * 0.75, size: 1, speed: 10}));
-    backgrounds.push(new Item({ sprite: sprites.background.ground.clone(), state: 'move', logic: logics.background.move, x: sprites.background.ground.width, y: screen.height * 0.75, size: 1, speed: 10}));
-
-    return backgrounds;
-  })()
+const staticItems = {
+  knight: null,
+  bat: null,
+  fire: {
+    iceBall: null
+  },
+  backgrounds: {
+    sky: null
+  }
 }
+function setStaticItems() {
+  
+  function setKnight() {
+    const sprite = sprites.knight.idle.clone();
+    const state = 'idle';
+    const logic = logics.knight.fight;
+    const x = 0;  // 可修改
+    const y = screen.height * 0.7;
+    const size = 4;
+    const speed = 10;
+    const width = sprite.width * size;
+    const height = sprite.height * size;
+    const hitBox = new HitBox({
+      type: 'rectangle',
+      centerX: x + width * 0.42,
+      centerY: y + height * 0.6,
+      width: width * 0.25,
+      height: height * 0.75,
+      angle: 0
+    });
+    staticItems.knight = new Item({ sprite, state, logic, x, y, size, speed, hitBox });
+  }
+  setKnight();
+  
+  function setBat() {
+    const sprite = sprites.bat.fly.clone();
+    const state = 'fly';
+    const logic = logics.bat.fly;
+    const x = 0;
+    const y = 0;
+    const size = 3;
+    const speed = 10;
+    const width = sprite.width * size;
+    const height = sprite.height * size;
+    const hitBox = new HitBox({
+      type: 'rectangle',
+      centerX: x + width * 0.46,
+      centerY: y + height * 0.5,
+      width: width * 0.3,
+      height: height * 0.3,
+      angle: 0
+    });
+    staticItems.bat = new Item({ sprite, state, logic, x, y, size, speed, hitBox });
+  }
+  setBat();
+  
+  function setBackgrounds() {
+    const state = 'move';
+    const logic = logics.background.move;
+    const x = 0, y = 0;
+    const hitBox = new HitBox({
+      type: 'rectangle',  // 可能需要改为原图的大小
+      centerX: screen.width / 2,
+      centerY: screen.height / 2,
+      width: screen.width,
+      height: screen.height,
+      angle: 0
+    })
 
+    staticItems.backgrounds.sky = new Item({
+      sprite: sprites.background.sky.clone(),
+      size: screen.height / sprites.background.sky.height,
+      speed: 1,
+      state, logic, x, y, hitBox
+    });
 
+    for (let i = 1; i <= 4; i++) {
+      staticItems.backgrounds[`tree${i}`] = new Item({
+        sprite: sprites.background[`tree${i}`].clone(),
+        size: screen.height / sprites.background[`tree${i}`].height,
+        speed: Math.floor(Math.pow(i, 1.3)) + 1,
+        state, logic, x, y, hitBox
+      });
+    }
 
+    staticItems.backgrounds.ground = new Item({
+      sprite: sprites.background.ground.clone(),
+      size: screen.height / sprites.background.ground.height,
+      speed: 7,
+      state, logic, x, hitBox,
+      y: 0.7 * screen.height
+    });
+  }
+  setBackgrounds();
+
+  function setFire() {
+    const sprite = sprites.fire.iceBall.clone();
+    const state = 'fly';
+    const logic = logics.fire.fly;
+    const x = 300;
+    const y = 300;
+    const size = 6;
+    const speed = 30;
+    const angle = 0;
+    const width = sprite.width * size;
+    const height = sprite.height * size;
+    const hitBox = new HitBox({
+      type: 'circle',
+      centerX: x + width * 0.95,
+      centerY: y + height * 0.45,
+      radius: height * 0.75,
+      angle: 0
+    });
+    staticItems.fire.iceBall = new Item({ sprite, state, logic, x, y, size, speed, angle, hitBox });
+  }
+  setFire();
+}
+setStaticItems();
   
 
+const dynamicItems = {
+  knight: null,
+  bats: [],
+  fires: [],
+  backgrounds: []
+}
+function setDynamicItems() {
+  Object.values(staticItems.backgrounds).forEach(background => {  // 创建背景
+    const backgroundCopy = background.clone();
+    dynamicItems.backgrounds.push(backgroundCopy.clone());
+    backgroundCopy.x += backgroundCopy.width;
+    dynamicItems.backgrounds.push(backgroundCopy.clone());
+  });
 
+  dynamicItems.knight = staticItems.knight.clone();  // 创建骑士
+
+  setInterval(() => {  // 创建蝙蝠
+    const bat = staticItems.bat.clone();
+    bat.moveTo({
+      x: screen.width + Math.random() * screen.width * 0.3,
+      y: Math.random() * screen.height * 0.7
+    })
+    dynamicItems.bats.push(bat);
+  }, 200);
+}
 
 
 function animate() {
   screen.clear();
 
-  items.backgrounds.forEach(background => background.animate(screen));
-  items.bats.forEach(bat => bat.animate(screen));
-  items.fires.forEach(fire => fire.animate(screen));
-  items.knight.animate(screen);
+  dynamicItems.backgrounds.forEach(background => background.animate(screen));
+  dynamicItems.bats.forEach(bat => bat.animate(screen));
+  dynamicItems.fires.forEach(fire => fire.animate(screen));
+  dynamicItems.knight.animate(screen);
 
   // 还没有移除火球
 
@@ -215,9 +306,6 @@ function animate() {
   }, 1000 / GAME_FRAME);
   
 }
-
-animate();
-
 
 
 function setKeyboard() {
@@ -236,7 +324,7 @@ function setKeyboard() {
     }
     keyboard.innerHTML += '<br>';
   }
-  console.log(keyboard.innerHTML);
+  // console.log(keyboard.innerHTML);
 
   const keys = document.querySelectorAll('.keyboard .key');
   keys.forEach(key => key.addEventListener('click', function() {
@@ -257,14 +345,17 @@ function setKeyboard() {
         curKey = key.innerHTML;
         break;
     }
-    console.log(curKey);
+    // console.log(curKey);
   }));
 }
 
-setKeyboard();
 
-
-
+function gameStart() {
+  setKeyboard();  // 打印键盘
+  setDynamicItems();  // 创建需要创建的Item实例
+  animate();  // 动画
+}
+gameStart();
 
 
 

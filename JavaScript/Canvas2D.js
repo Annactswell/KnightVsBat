@@ -12,28 +12,23 @@ export class Canvas2D {
     this.ctx.clearRect(0, 0, this.width, this.height);
   }
 
-  drawSprite(sprite, x, y, width, height, angle) {
+  drawSprite({ sprite=null, x=0, y=0, width=0, height=0, rotate=null }) {
     const frame = Math.floor(sprite.frame);
     const length = sprite.endX - sprite.startX + 1;
     const frameX = sprite.startX + frame % length;
     const frameY = sprite.startY + Math.floor(frame / length);
-    if (!angle) this.ctx.drawImage(sprite.image, frameX * sprite.width, frameY * sprite.height, sprite.width, sprite.height, x, y, width, height);
-    else {
-      // angle = Math.PI * angle / 180;
+    if (!rotate) {
+      this.ctx.drawImage(sprite.image, frameX * sprite.width, frameY * sprite.height, sprite.width, sprite.height, x, y, width, height);
+    } else {
       this.ctx.save();
-      this.ctx.translate(x + sprite.width / 2, y + sprite.height / 2);
-      this.ctx.rotate(angle);
-      this.ctx.drawImage(sprite.image, frameX * sprite.width, frameY * sprite.height, sprite.width, sprite.height, - width / 2, - height / 2, width, height);
+      this.ctx.translate(rotate.centerX, rotate.centerY);
+      this.ctx.rotate(-rotate.angle);
+      this.ctx.drawImage(sprite.image, frameX * sprite.width, frameY * sprite.height, sprite.width, sprite.height, x - rotate.centerX, y - rotate.centerY, width, height);
       this.ctx.restore();
     }
-// 309 647
-// 
-
-
-
   }
 
-  drawRect(x, y, width, height) {
+  drawRect(x, y, width, height) {  // 加入角度
     this.ctx.strokeRect(x, y, width, height);
   }
 
